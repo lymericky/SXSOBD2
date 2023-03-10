@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- start/stop bluetooth adapter -->
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <!-- connect/disconnect bluetooth devices -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"/>
+
+    <!--Location permission is necessary for Bluetooth as of API 31 -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+
+    <!-- to keep Bluetooth measurement running even when screen is inactive -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- allow saving screenshots -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <!-- allow saving screenshots -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
+    <!-- allow access to WIFI adapter -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <uses-feature android:name="android.hardware.bluetooth_le"
+        android:required="true"/>
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.SXSOBD2"
+        tools:targetApi="31">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.app.lib_name"
+                android:value="" />
+            <intent-filter>
+                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
+                android:resource="@xml/device_filter" />
+        </activity>
+        <activity
+            android:name=".UsbDeviceListActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:label="@string/select_device" />
+        <activity
+            android:name=".BtDeviceListActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:label="@string/select_device" />
+        <activity
+            android:name=".ChartActivity"
+            android:configChanges="touchscreen|orientation|screenSize"
+            android:label="@string/chart" />
+        <activity
+            android:name=".DashBoardActivity"
+            android:configChanges="touchscreen|orientation|screenSize"
+            android:label="@string/dashboard" />
+        <activity
+            android:name=".SettingsActivity"
+            android:configChanges="touchscreen|orientation|screenSize"
+            android:label="@string/settings" />
+        <activity
+            android:name=".PidCustomization"
+            android:label="@string/customize_display"
+            android:configChanges="touchscreen|orientation|screenSize" />
+    </application>
+
+</manifest>

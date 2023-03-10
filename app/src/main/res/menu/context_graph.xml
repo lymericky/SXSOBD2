@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android" >
+    <item
+        android:id="@+id/chart_selected"
+        android:icon="@drawable/ic_chart"
+        android:showAsAction="ifRoom"
+        android:title="@string/chart"
+        tools:ignore="AppCompatResource" />
+    <item
+        android:id="@+id/dashboard_selected"
+        android:icon="@drawable/ic_speedometer"
+        android:showAsAction="ifRoom"
+        android:title="@string/dashboard"
+        tools:ignore="AppCompatResource" />
+    <item
+        android:id="@+id/hud_selected"
+        android:icon="@drawable/ic_headup"
+        android:showAsAction="ifRoom"
+        android:title="@string/hud"
+        tools:ignore="AppCompatResource" />
+    <item
+        android:id="@+id/filter_selected"
+        android:icon="@drawable/ic_filter"
+        android:showAsAction="ifRoom"
+        android:title="@string/filter"
+        tools:ignore="AppCompatResource" />
+</menu>
