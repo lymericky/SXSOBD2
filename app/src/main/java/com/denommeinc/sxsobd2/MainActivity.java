@@ -61,6 +61,7 @@ import com.fr3ts0n.pvs.PvChangeEvent;
 import com.fr3ts0n.pvs.PvChangeListener;
 import com.fr3ts0n.pvs.PvList;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
+import com.google.android.material.textview.MaterialTextView;
 
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
@@ -285,31 +286,35 @@ public class MainActivity extends PluginManager
      */
     private FileHelper fileHelper;
 
+/* --------------------------------------------- Views & Widgets ---------------------------------*/
     /**
      * the local list view
      */
     private View mListView;
 
+    /*
+    * Display fault count
+    * */
+    public MaterialTextView faultCount_mtv;
+
     /**
-     * Startup Layout visibility
+     * Layout visibility at startup
      * */
     public LinearLayout mainLinearLayout;
 
-    /**
-     * Connect FAB
-     * */
-    private ExtendedFloatingActionButton connect_fab;
+    public ExtendedFloatingActionButton connect_fab;
 
-    /**
-    * View Data Button
-    * */
     public ImageButton data_btn;
+
+    public ImageButton viewFaultCodes_btn;
+
+    public ImageButton clearFaultCodes_btn;
 
     /**
     * Settings Button
     * */
     public ImageButton settings_btn;
-
+/*------------------------------------------------------------------------------------------------*/
     /*
      * current data view mode
      */
@@ -633,6 +638,14 @@ public class MainActivity extends PluginManager
         setContentView(layout.startup_layout);
 
         mainLinearLayout = findViewById(id.mainLinearLayout);
+        
+        faultCount_mtv = findViewById(id.faultCount_mtv);
+
+        viewFaultCodes_btn = findViewById(id.viewFaultCodes_btn);
+        viewFaultCodes_btn.setOnClickListener(this);
+
+        clearFaultCodes_btn = findViewById(id.clearFaultCodes_btn);
+        clearFaultCodes_btn.setOnClickListener(this);
 
         data_btn = findViewById(id.data_btn);
         data_btn.setOnClickListener(this);
@@ -868,6 +881,17 @@ public class MainActivity extends PluginManager
                     }
                 }
                 break;
+            case R.id.viewFaultCodes_btn:
+                Toast.makeText(this, "Viewing Faults", Toast.LENGTH_SHORT).show();
+                setObdService(ObdProt.OBD_SVC_READ_CODES, null);
+                break;
+            case R.id.clearFaultCodes_btn:
+                Toast.makeText(this, "Clearing Fault Codes", Toast.LENGTH_SHORT).show();
+                clearObdFaultCodes();
+                setObdService(ObdProt.OBD_SVC_READ_CODES, null);
+                break;
+
+            default:
         }
     }
 
