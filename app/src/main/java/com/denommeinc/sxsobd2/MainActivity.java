@@ -38,13 +38,10 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
-import android.widget.ImageButton;
-import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.Toast;
@@ -52,9 +49,12 @@ import android.widget.Toast;
 import com.fr3ts0n.androbd.plugin.Plugin;
 import com.fr3ts0n.androbd.plugin.mgr.PluginManager;
 import com.fr3ts0n.ecu.EcuCodeItem;
+import com.fr3ts0n.ecu.EcuCodeList;
 import com.fr3ts0n.ecu.EcuDataItem;
 import com.fr3ts0n.ecu.EcuDataItems;
 import com.fr3ts0n.ecu.EcuDataPv;
+import com.fr3ts0n.ecu.ObdCodeItem;
+import com.fr3ts0n.ecu.ObdCodeList;
 import com.fr3ts0n.ecu.prot.obd.ElmProt;
 import com.fr3ts0n.ecu.prot.obd.ObdProt;
 import com.fr3ts0n.pvs.ProcessVar;
@@ -62,13 +62,13 @@ import com.fr3ts0n.pvs.PvChangeEvent;
 import com.fr3ts0n.pvs.PvChangeListener;
 import com.fr3ts0n.pvs.PvList;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
-import com.google.android.material.textview.MaterialTextView;
 
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
@@ -120,6 +120,7 @@ public class MainActivity extends PluginManager
                     EcuDataPv.FID_MAX,
                     EcuDataPv.FIELDS[EcuDataPv.FID_UNITS]
             };
+    private static final String TAG = "SXSOBD2";
     private static final String DEVICE_ADDRESS = "device_address";
     private static final String DEVICE_PORT = "device_port";
     private static final String MEASURE_SYSTEM = "measure_system";
@@ -135,7 +136,8 @@ public class MainActivity extends PluginManager
     private static final int MESSAGE_OBD_NUMCODES = 9;
     private static final int MESSAGE_OBD_ECUS = 10;
     private static final int MESSAGE_OBD_NRC = 11;
-    private static final String TAG = "SXSOBD2";
+    public static ArrayList<Integer> PENDING_FAULT_CODES = new ArrayList<>();
+
 
     /**
      * internal Intent request codes
@@ -298,28 +300,8 @@ public class MainActivity extends PluginManager
      */
     private View mListView;
 
-    /*
-    * Display fault count
-    * */
-    public MaterialTextView faultCount_mtv;
-
-    /**
-     * Layout visibility at startup
-     * */
-    public LinearLayout mainLinearLayout;
-
     public ExtendedFloatingActionButton connect_fab;
 
-    public ImageButton data_btn;
-
-    public ImageButton viewFaultCodes_btn;
-
-    public ImageButton clearFaultCodes_btn;
-
-    /**
-    * Settings Button
-    * */
-    public ImageButton settings_btn;
 /*------------------------------------------------------------------------------------------------*/
     /*
      * current data view mode
@@ -542,6 +524,13 @@ public class MainActivity extends PluginManager
                     case MESSAGE_OBD_NUMCODES:
                         evt = (PropertyChangeEvent) msg.obj;
                         setNumCodes((Integer) evt.getNewValue());
+
+                        String oldValue = evt.getOldValue().toString();
+                        String newValue = evt.getNewValue().toString();
+
+                        //myLog("Fault Codes: \t" + "Old Value : " + oldValue + " New Value : " + newValue);
+
+
                         break;
 
                     // handle ECU detection event
@@ -716,22 +705,6 @@ public class MainActivity extends PluginManager
         // set content view
         setContentView(layout.startup_layout);
 
-        mainLinearLayout = findViewById(id.mainLinearLayout);
-        
-        faultCount_mtv = findViewById(id.faultCount_mtv);
-
-        viewFaultCodes_btn = findViewById(id.viewFaultCodes_btn);
-        viewFaultCodes_btn.setOnClickListener(this);
-
-        clearFaultCodes_btn = findViewById(id.clearFaultCodes_btn);
-        clearFaultCodes_btn.setOnClickListener(this);
-
-        data_btn = findViewById(id.data_btn);
-        data_btn.setOnClickListener(this);
-
-        settings_btn = findViewById(id.settings_btn);
-        settings_btn.setOnClickListener(this);
-
         connect_fab = findViewById(id.connect_fab);
         connect_fab.setOnClickListener(this);
 
@@ -898,22 +871,15 @@ public class MainActivity extends PluginManager
     /**
      * Handler for visibility delay
      * */
+    @SuppressLint("NewApi")
     public void delayVisibility() {
         int delayTime = 4000;
         final Handler handler = new Handler();
-        if (mode == MODE.ONLINE) {
-            handler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    mainLinearLayout.setVisibility(View.VISIBLE);
-                    connect_fab.setText(string.disconnect);
-                    connect_fab.setBackgroundColor(getResources().getColor(color.green));
-                }
+        if (ECU_CONNECTED) {
+            handler.postDelayed(() -> {
+                View v = getListView();
+                setObdService(ObdProt.OBD_SVC_DATA, v.getAccessibilityPaneTitle());
             }, delayTime);
-        } else if (mode == MODE.OFFLINE){
-            connect_fab.setText(string.reconnect);
-            connect_fab.setBackgroundColor(getResources().getColor(color.red));
-            mainLinearLayout.setVisibility(View.INVISIBLE);
         }
     }
 
@@ -940,38 +906,15 @@ public class MainActivity extends PluginManager
     @Override
     public void onClick(View v) {
         int id = v.getId();
-        switch (id) {
-
-            case R.id.data_btn:
-                setObdService(ObdProt.OBD_SVC_DATA, v.getAccessibilityPaneTitle());
-                Toast.makeText(this, "service_data", Toast.LENGTH_SHORT).show();
-                break;
-            case R.id.settings_btn:
-                Toast.makeText(this, "settings", Toast.LENGTH_SHORT).show();
-                Intent settingsIntent = new Intent(this, SettingsActivity.class);
-                startActivityForResult(settingsIntent, REQUEST_SETTINGS);
-                break;
-            case R.id.connect_fab:
-                if (getMode() == MODE.OFFLINE) {
-                    setMode(MODE.ONLINE);
-                } else {
-                    setMode(MODE.OFFLINE);
-                    if (mCommService != null) {
-                        mCommService.stop();
-                    }
+        if (id == R.id.connect_fab) {
+            if (getMode() == MODE.OFFLINE) {
+                setMode(MODE.ONLINE);
+            } else {
+                setMode(MODE.OFFLINE);
+                if (mCommService != null) {
+                    mCommService.stop();
                 }
-                break;
-            case R.id.viewFaultCodes_btn:
-                Toast.makeText(this, "Viewing Faults", Toast.LENGTH_SHORT).show();
-                setObdService(ObdProt.OBD_SVC_READ_CODES, null);
-                break;
-            case R.id.clearFaultCodes_btn:
-                Toast.makeText(this, "Clearing Fault Codes", Toast.LENGTH_SHORT).show();
-                clearObdFaultCodes();
-                setObdService(ObdProt.OBD_SVC_READ_CODES, null);
-                break;
-
-            default:
+            }
         }
     }
 
@@ -1068,10 +1011,10 @@ public class MainActivity extends PluginManager
                 Toast.makeText(this, "service_clearcodes", Toast.LENGTH_SHORT).show();
                 return true;
 
-            case id.context_graph:
-
-                Intent dashboardIntent = new Intent(MainActivity.this, DashBoardActivity.class);
-                startActivityForResult(dashboardIntent, REQUEST_DASHBOARD_DISPLAY);
+//            case id.context_graph:
+//
+//                Intent dashboardIntent = new Intent(MainActivity.this, DashBoardActivity.class);
+//                startActivityForResult(dashboardIntent, REQUEST_DASHBOARD_DISPLAY);
         }
 
         return super.onOptionsItemSelected(item);
@@ -1159,7 +1102,7 @@ public class MainActivity extends PluginManager
                     setMode(MODE.OFFLINE);
                     connect_fab.setText(string.reconnect);
                     connect_fab.setBackgroundColor(getResources().getColor(color.red));
-                    mainLinearLayout.setVisibility(View.INVISIBLE);
+
                 }
                 break;
 
@@ -1175,7 +1118,6 @@ public class MainActivity extends PluginManager
                     setMode(MODE.OFFLINE);
                     connect_fab.setText(string.reconnect);
                     connect_fab.setBackgroundColor(getResources().getColor(color.red));
-                    mainLinearLayout.setVisibility(View.INVISIBLE);
                 }
                 break;
 
@@ -1482,7 +1424,7 @@ public class MainActivity extends PluginManager
                     intent = new Intent(Intent.ACTION_WEB_SEARCH);
                     EcuCodeItem dfc = (EcuCodeItem) getListAdapter().getItem(position);
                     intent.putExtra(SearchManager.QUERY,
-                            "OBD " + String.valueOf(dfc.get(EcuCodeItem.FID_CODE)));
+                            "OBD " + dfc.get(EcuCodeItem.FID_CODE));
                     startActivity(intent);
                 } catch (Exception e)
                 {
@@ -1812,7 +1754,7 @@ public class MainActivity extends PluginManager
         } catch (Exception ex)
         {
             // log error message
-            log.severe(String.format("Preference '%s'(%d): %s", key, result, ex.toString()));
+            log.severe(String.format("Preference '%s'(%d): %s", key, result, ex));
         }
 
         return result;
@@ -2540,7 +2482,7 @@ public class MainActivity extends PluginManager
     private void runObdTestControl(String testControlName, int service, int tid)
     {
         // start desired test TID
-        char emptyBuffer[] = {};
+        char[] emptyBuffer = {};
         CommService.elm.writeTelegram(emptyBuffer, service, tid);
 
         // Show test progress message
