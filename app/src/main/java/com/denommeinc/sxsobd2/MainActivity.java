@@ -38,6 +38,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.AbsListView;
@@ -192,7 +193,12 @@ public class MainActivity extends PluginManager
     /**
      * current connection status
      * */
-    public static boolean CONNECTED = false;
+    public static boolean BLE_CONNECTED = false;
+
+    /**
+     * current ecu connection status
+     * */
+    public static boolean ECU_CONNECTED = false;
 
     /**
      * app preferences ...
@@ -288,7 +294,7 @@ public class MainActivity extends PluginManager
 
 /* --------------------------------------------- Views & Widgets ---------------------------------*/
     /**
-     * the local list view
+     * The local list view
      */
     private View mListView;
 
@@ -339,6 +345,69 @@ public class MainActivity extends PluginManager
      * current operating mode
      */
     private MODE mode = MODE.OFFLINE;
+
+    /*
+     * simple log utility
+     * */
+    public static void myLog(String msg) {
+        String TAG = "STATUS";
+        Log.i(TAG, msg);
+    }
+
+    public static boolean isEcuConnected(ElmProt.STAT status) {
+        switch (status) {
+            case INITIALIZING:
+                myLog("ECU Status : Initializing...");
+                break;
+            case INITIALIZED:
+                myLog("ECU Status : Initialized");
+                break;
+            case CONNECTING:
+                myLog("ECU Status : Connecting...");
+                break;
+            case CONNECTED:
+                myLog("ECU Status : Connected");
+                ECU_CONNECTED = true;
+                break;
+            case ECU_DETECT:
+                myLog("ECU Status : ECU Detecting...");
+                break;
+            case ECU_DETECTED:
+                myLog("ECU Status : ECU Detected");
+                ECU_CONNECTED = true;
+                break;
+            case STOPPED:
+                myLog("ECU Status : Stopped");
+                break;
+            case NODATA:
+                myLog("ECU Status : No Data");
+                break;
+            case DATAERROR:
+                myLog("ECU Status : Data Error");
+                break;
+            case UNDEFINED:
+                myLog("ECU Status : Undefined");
+                break;
+            case ERROR:
+                myLog("ECU Status : ERROR");
+                ECU_CONNECTED = false;
+                break;
+            case RXERROR:
+                myLog("ECU Status : RXError");
+                ECU_CONNECTED = false;
+                break;
+            case BUSERROR:
+                myLog("ECU Status : BUS Error");
+                ECU_CONNECTED = false;
+                break;
+            case DISCONNECTED:
+                myLog("ECU Status : Disconnected");
+                ECU_CONNECTED = false;
+                break;
+            default:
+        }
+        return ECU_CONNECTED;
+    }
 
     /**
      * Handle message requests
@@ -448,6 +517,10 @@ public class MainActivity extends PluginManager
                     case MESSAGE_OBD_STATE_CHANGED:
                         evt = (PropertyChangeEvent) msg.obj;
                         ElmProt.STAT state = (ElmProt.STAT) evt.getNewValue();
+
+                        if (isEcuConnected(state)) {
+                            delayVisibility();
+                        }
                         /* Show ELM status only in ONLINE mode */
                         if (getMode() != MODE.DEMO)
                         {
@@ -491,6 +564,7 @@ public class MainActivity extends PluginManager
                                         .setTitle(string.obd_error)
                                         .setMessage(nrcMsg)
                                         .setPositiveButton(null, null)
+                                        .setCancelable(false)
                                         .show();
                                 break;
                             // Display warning (with confirmation)
@@ -500,6 +574,7 @@ public class MainActivity extends PluginManager
                                         .setTitle(string.obd_error)
                                         .setMessage(nrcMsg)
                                         .setPositiveButton(null, null)
+                                        .setCancelable(false)
                                         .show();
                                 break;
                             // Display notification (no confirmation)
@@ -606,6 +681,10 @@ public class MainActivity extends PluginManager
 
         // get list view
         mListView = getWindow().getLayoutInflater().inflate(layout.obd_list, null);
+
+
+
+
 
         // update all settings from preferences
         onSharedPreferenceChanged(prefs, null);
@@ -783,7 +862,7 @@ public class MainActivity extends PluginManager
     {
         if (getListAdapter() == pluginHandler)
         {
-            setObdService(obdService, null);
+            setObdService(obdService, String.valueOf(CommService.elm.getService()));
         } else
         {
             if (CommService.elm.getService() != ObdProt.OBD_SVC_NONE)
@@ -819,7 +898,8 @@ public class MainActivity extends PluginManager
     /**
      * Handler for visibility delay
      * */
-    public void delayVisibility(int delayTime) {
+    public void delayVisibility() {
+        int delayTime = 4000;
         final Handler handler = new Handler();
         if (mode == MODE.ONLINE) {
             handler.postDelayed(new Runnable() {
@@ -1587,6 +1667,7 @@ public class MainActivity extends PluginManager
                                         .apply();
                             }
                         })
+                        .setCancelable(false)
                         .show();
             }
         }
@@ -1996,6 +2077,13 @@ public class MainActivity extends PluginManager
                     .setIcon(android.R.drawable.ic_dialog_alert)
                     .setTitle(string.extension_loading)
                     .setMessage(getString(string.check_cust_settings) + errors)
+                    .setPositiveButton("OKAY", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            dialog.dismiss();
+                        }
+                    })
+                    .setCancelable(false)
                     .show();
         }
     }
@@ -2074,7 +2162,6 @@ public class MainActivity extends PluginManager
             // show action bar to make state change visible
             unHideActionBar();
             showStatus(subTitle);
-            delayVisibility(4000);
         }
     }
 
@@ -2348,7 +2435,7 @@ public class MainActivity extends PluginManager
     {
         // handle further initialisations
         setMode(MODE.OFFLINE);
-        CONNECTED = false;
+        BLE_CONNECTED = false;
     }
 
     /**
@@ -2418,6 +2505,7 @@ public class MainActivity extends PluginManager
                             }
                         })
                 .setNegativeButton(android.R.string.no, null)
+                .setCancelable(false)
                 .show();
     }
 
@@ -2441,6 +2529,7 @@ public class MainActivity extends PluginManager
                             }
                         })
                 .setNegativeButton(android.R.string.no, null)
+                .setCancelable(false)
                 .show();
     }
 
@@ -2468,6 +2557,7 @@ public class MainActivity extends PluginManager
                             }
                         })
                 .setNegativeButton(null, null)
+                .setCancelable(false)
                 .show();
     }
 
