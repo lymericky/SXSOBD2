@@ -38,6 +38,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.AbsListView;
@@ -293,7 +294,7 @@ public class MainActivity extends PluginManager
 
 /* --------------------------------------------- Views & Widgets ---------------------------------*/
     /**
-     * the local list view
+     * The local list view
      */
     private View mListView;
 
@@ -563,6 +564,7 @@ public class MainActivity extends PluginManager
                                         .setTitle(string.obd_error)
                                         .setMessage(nrcMsg)
                                         .setPositiveButton(null, null)
+                                        .setCancelable(false)
                                         .show();
                                 break;
                             // Display warning (with confirmation)
@@ -572,6 +574,7 @@ public class MainActivity extends PluginManager
                                         .setTitle(string.obd_error)
                                         .setMessage(nrcMsg)
                                         .setPositiveButton(null, null)
+                                        .setCancelable(false)
                                         .show();
                                 break;
                             // Display notification (no confirmation)
@@ -678,6 +681,10 @@ public class MainActivity extends PluginManager
 
         // get list view
         mListView = getWindow().getLayoutInflater().inflate(layout.obd_list, null);
+
+
+
+
 
         // update all settings from preferences
         onSharedPreferenceChanged(prefs, null);
@@ -855,7 +862,7 @@ public class MainActivity extends PluginManager
     {
         if (getListAdapter() == pluginHandler)
         {
-            setObdService(obdService, null);
+            setObdService(obdService, String.valueOf(CommService.elm.getService()));
         } else
         {
             if (CommService.elm.getService() != ObdProt.OBD_SVC_NONE)
@@ -1660,6 +1667,7 @@ public class MainActivity extends PluginManager
                                         .apply();
                             }
                         })
+                        .setCancelable(false)
                         .show();
             }
         }
@@ -2069,6 +2077,13 @@ public class MainActivity extends PluginManager
                     .setIcon(android.R.drawable.ic_dialog_alert)
                     .setTitle(string.extension_loading)
                     .setMessage(getString(string.check_cust_settings) + errors)
+                    .setPositiveButton("OKAY", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            dialog.dismiss();
+                        }
+                    })
+                    .setCancelable(false)
                     .show();
         }
     }
@@ -2490,6 +2505,7 @@ public class MainActivity extends PluginManager
                             }
                         })
                 .setNegativeButton(android.R.string.no, null)
+                .setCancelable(false)
                 .show();
     }
 
@@ -2513,6 +2529,7 @@ public class MainActivity extends PluginManager
                             }
                         })
                 .setNegativeButton(android.R.string.no, null)
+                .setCancelable(false)
                 .show();
     }
 
@@ -2540,6 +2557,7 @@ public class MainActivity extends PluginManager
                             }
                         })
                 .setNegativeButton(null, null)
+                .setCancelable(false)
                 .show();
     }
 
