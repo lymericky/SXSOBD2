@@ -192,7 +192,12 @@ public class MainActivity extends PluginManager
     /**
      * current connection status
      * */
-    public static boolean CONNECTED = false;
+    public static boolean BLE_CONNECTED = false;
+
+    /**
+     * current ecu connection status
+     * */
+    public static boolean ECU_CONNECTED = false;
 
     /**
      * app preferences ...
@@ -340,6 +345,69 @@ public class MainActivity extends PluginManager
      */
     private MODE mode = MODE.OFFLINE;
 
+    /*
+     * simple log utility
+     * */
+    public static void myLog(String msg) {
+        String TAG = "STATUS";
+        Log.i(TAG, msg);
+    }
+
+    public static boolean isEcuConnected(ElmProt.STAT status) {
+        switch (status) {
+            case INITIALIZING:
+                myLog("ECU Status : Initializing...");
+                break;
+            case INITIALIZED:
+                myLog("ECU Status : Initialized");
+                break;
+            case CONNECTING:
+                myLog("ECU Status : Connecting...");
+                break;
+            case CONNECTED:
+                myLog("ECU Status : Connected");
+                ECU_CONNECTED = true;
+                break;
+            case ECU_DETECT:
+                myLog("ECU Status : ECU Detecting...");
+                break;
+            case ECU_DETECTED:
+                myLog("ECU Status : ECU Detected");
+                ECU_CONNECTED = true;
+                break;
+            case STOPPED:
+                myLog("ECU Status : Stopped");
+                break;
+            case NODATA:
+                myLog("ECU Status : No Data");
+                break;
+            case DATAERROR:
+                myLog("ECU Status : Data Error");
+                break;
+            case UNDEFINED:
+                myLog("ECU Status : Undefined");
+                break;
+            case ERROR:
+                myLog("ECU Status : ERROR");
+                ECU_CONNECTED = false;
+                break;
+            case RXERROR:
+                myLog("ECU Status : RXError");
+                ECU_CONNECTED = false;
+                break;
+            case BUSERROR:
+                myLog("ECU Status : BUS Error");
+                ECU_CONNECTED = false;
+                break;
+            case DISCONNECTED:
+                myLog("ECU Status : Disconnected");
+                ECU_CONNECTED = false;
+                break;
+            default:
+        }
+        return ECU_CONNECTED;
+    }
+
     /**
      * Handle message requests
      */
@@ -448,6 +516,10 @@ public class MainActivity extends PluginManager
                     case MESSAGE_OBD_STATE_CHANGED:
                         evt = (PropertyChangeEvent) msg.obj;
                         ElmProt.STAT state = (ElmProt.STAT) evt.getNewValue();
+
+                        if (isEcuConnected(state)) {
+                            delayVisibility();
+                        }
                         /* Show ELM status only in ONLINE mode */
                         if (getMode() != MODE.DEMO)
                         {
@@ -819,7 +891,8 @@ public class MainActivity extends PluginManager
     /**
      * Handler for visibility delay
      * */
-    public void delayVisibility(int delayTime) {
+    public void delayVisibility() {
+        int delayTime = 4000;
         final Handler handler = new Handler();
         if (mode == MODE.ONLINE) {
             handler.postDelayed(new Runnable() {
@@ -2074,7 +2147,6 @@ public class MainActivity extends PluginManager
             // show action bar to make state change visible
             unHideActionBar();
             showStatus(subTitle);
-            delayVisibility(4000);
         }
     }
 
@@ -2348,7 +2420,7 @@ public class MainActivity extends PluginManager
     {
         // handle further initialisations
         setMode(MODE.OFFLINE);
-        CONNECTED = false;
+        BLE_CONNECTED = false;
     }
 
     /**
