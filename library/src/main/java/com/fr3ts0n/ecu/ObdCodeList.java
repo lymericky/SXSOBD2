@@ -40,7 +40,7 @@ public class ObdCodeList
 	}
 
 	/**
-	 * Construct a new code list and initialize it with ressources files
+	 * Construct a new code list and initialize it with resources files
 	 *
 	 * @param resourceBundleName name of used resource bundle
 	 */

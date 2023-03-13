@@ -49,12 +49,9 @@ import android.widget.Toast;
 import com.fr3ts0n.androbd.plugin.Plugin;
 import com.fr3ts0n.androbd.plugin.mgr.PluginManager;
 import com.fr3ts0n.ecu.EcuCodeItem;
-import com.fr3ts0n.ecu.EcuCodeList;
 import com.fr3ts0n.ecu.EcuDataItem;
 import com.fr3ts0n.ecu.EcuDataItems;
 import com.fr3ts0n.ecu.EcuDataPv;
-import com.fr3ts0n.ecu.ObdCodeItem;
-import com.fr3ts0n.ecu.ObdCodeList;
 import com.fr3ts0n.ecu.prot.obd.ElmProt;
 import com.fr3ts0n.ecu.prot.obd.ObdProt;
 import com.fr3ts0n.pvs.ProcessVar;
@@ -68,7 +65,6 @@ import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
@@ -140,8 +136,6 @@ public class MainActivity extends PluginManager
     private static final int MESSAGE_OBD_NUMCODES = 9;
     private static final int MESSAGE_OBD_ECUS = 10;
     private static final int MESSAGE_OBD_NRC = 11;
-    public static ArrayList<Integer> PENDING_FAULT_CODES = new ArrayList<>();
-
 
     /**
      * Internal Intent request codes
@@ -307,6 +301,48 @@ public class MainActivity extends PluginManager
     public ExtendedFloatingActionButton connect_fab;
 
 /*------------------------------------------------------------------------------------------------*/
+
+
+
+    /*----------------------------------------- Constants ----------------------------------------*/
+    public static int PERMA_CODES = 0;
+    public static int PENDING_CODES = 0;
+    public static int READ_CODES = 0;
+    public static int NEW_CODES = 0;
+
+    public static int getNewCodes() {
+        return NEW_CODES;
+    }
+
+    public static void setNewCodes(int newCodes) {
+        NEW_CODES = newCodes;
+    }
+
+    public static int getPermaCodes() {
+        return PERMA_CODES;
+    }
+
+    public static void setPermaCodes(int permaCodes) {
+        PERMA_CODES = permaCodes;
+    }
+
+    public static int getPendingCodes() {
+        return PENDING_CODES;
+    }
+
+    public static void setPendingCodes(int pendingCodes) {
+        PENDING_CODES = pendingCodes;
+    }
+
+    public static int getReadCodes() {
+        return READ_CODES;
+    }
+
+    public static void setReadCodes(int readCodes) {
+        READ_CODES = readCodes;
+    }
+
+    /*--------------------------------------------------------------------------------------------*/
     /*
      * Current data view mode
      */
@@ -512,7 +548,7 @@ public class MainActivity extends PluginManager
                         * */
                         if (isEcuConnected(state)) {
                             delayVisibility();
-                            readFaultCodes();
+                            getAllFaultCodes();
                         }
                         /* Show ELM status only in ONLINE mode */
                         if (getMode() != MODE.DEMO)
@@ -535,13 +571,6 @@ public class MainActivity extends PluginManager
                     case MESSAGE_OBD_NUMCODES:
                         evt = (PropertyChangeEvent) msg.obj;
                         setNumCodes((Integer) evt.getNewValue());
-
-                        String oldValue = evt.getOldValue().toString();
-                        String newValue = evt.getNewValue().toString();
-
-                        //myLog("Fault Codes: \t" + "Old Value : " + oldValue + " New Value : " + newValue);
-
-
                         break;
 
                     // handle ECU detection event
@@ -681,10 +710,6 @@ public class MainActivity extends PluginManager
 
         // get list view
         mListView = getWindow().getLayoutInflater().inflate(layout.obd_list, null);
-
-
-
-
 
         // update all settings from preferences
         onSharedPreferenceChanged(prefs, null);
@@ -1676,12 +1701,20 @@ public class MainActivity extends PluginManager
         {
             myLog("newNumCodes : " + newNumCodes);
 
-            list.setBackgroundResource((newNumCodes & 0x80) != 0
+            list.setBackgroundResource((newNumCodes) != 0
                     ? drawable.mil_on
                     : drawable.mil_off);
         }
         // enable / disable freeze frames based on number of codes
         setMenuItemEnable(id.service_freezeframes, (newNumCodes != 0));
+
+        setNewCodes(newNumCodes);
+        setReadCodes(ObdProt.OBD_SVC_READ_CODES);
+        setPendingCodes(ObdProt.OBD_SVC_PENDINGCODES);
+        setPermaCodes(ObdProt.OBD_SVC_PERMACODES);
+
+        getAllFaultCodes();
+
     }
 
     /**
@@ -2083,6 +2116,17 @@ public class MainActivity extends PluginManager
         }
     }
 
+    private int getAllFaultCodes() {
+        int clearable_codes = getNewCodes();
+
+        myLog("Read Fault Codes : " + getReadCodes());
+        myLog("Perm Codes : " + getPermaCodes());
+        myLog("Pending Codes : " + getPendingCodes());
+        myLog("New Clearable Codes : " + getNewCodes());
+
+        return clearable_codes;
+    }
+
     /*
     * Show connection status
     * */
@@ -2113,17 +2157,18 @@ public class MainActivity extends PluginManager
     /**
      * set status message in status bar
      *
-     * @param subTitle status text to be set
+     * @param title status text to be set
      */
-    private void setStatus(CharSequence subTitle)
+    private void setStatus(CharSequence title)
     {
         final ActionBar actionBar = getActionBar();
         if (actionBar != null)
         {
-            actionBar.setSubtitle(subTitle);
+            actionBar.setTitle(title);
+            actionBar.setSubtitle(string.app_name);
             // show action bar to make state change visible
             unHideActionBar();
-            showStatus(subTitle);
+            showStatus(title);
         }
     }
 
@@ -2199,22 +2244,22 @@ public class MainActivity extends PluginManager
         getListView().setChoiceMode(ListView.CHOICE_MODE_SINGLE);
 
         // set title
-        ActionBar ab = getActionBar();
-        if (ab != null)
-        {
-            // title specified ... show it
-            if (menuTitle != null)
-            {
-                ab.setTitle(menuTitle);
-            } else
-            {
-                // no title specified, set to app name if no service set
-                if (newObdService == ElmProt.OBD_SVC_NONE)
-                {
-                    ab.setTitle(getString(string.app_name));
-                }
-            }
-        }
+//        ActionBar ab = getActionBar();
+//        if (ab != null)
+//        {
+//            // title specified ... show it
+//            if (menuTitle != null)
+//            {
+//                ab.setTitle(menuTitle);
+//            } else
+//            {
+//                // no title specified, set to app name if no service set
+//                if (newObdService == ElmProt.OBD_SVC_NONE)
+//                {
+//                    ab.setTitle(getString(string.app_name));
+//                }
+//            }
+//        }
         // set protocol service
         CommService.elm.setService(newObdService, (getMode() != MODE.FILE && getMode() != MODE.OFFLINE));
         // show / hide freeze frame selector */
@@ -2469,11 +2514,6 @@ public class MainActivity extends PluginManager
                 .setNegativeButton(android.R.string.no, null)
                 .setCancelable(false)
                 .show();
-    }
-
-    public void readFaultCodes() {
-        String faultCodes = String.valueOf(ObdProt.OBD_SVC_READ_CODES);
-        myLog("Fault Codes : " + faultCodes);
     }
 
     /**
