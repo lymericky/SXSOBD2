@@ -90,6 +90,10 @@ public class MainActivity extends PluginManager
         SharedPreferences.OnSharedPreferenceChangeListener,
         AbsListView.MultiChoiceModeListener, View.OnClickListener {
 
+    /*
+    * Note: pv = process variable
+    * */
+
     /**
      * Key names for preferences
      */
@@ -140,7 +144,7 @@ public class MainActivity extends PluginManager
 
 
     /**
-     * internal Intent request codes
+     * Internal Intent request codes
      */
     private static final int REQUEST_CONNECT_DEVICE_SECURE = 1;
     private static final int REQUEST_CONNECT_DEVICE_INSECURE = 2;
@@ -154,12 +158,12 @@ public class MainActivity extends PluginManager
     private static final int REQUEST_DASHBOARD_DISPLAY = 20;
 
     /**
-     * app exit parameters
+     * App exit parameters
      */
     private static final int EXIT_TIMEOUT = 2500;
 
     /**
-     * time between display updates to represent data changes
+     * Time between display updates to represent data changes
      */
     private static final int DISPLAY_UPDATE_TIME = 250;
     private static final String LOG_MASTER = "log_master";
@@ -178,7 +182,7 @@ public class MainActivity extends PluginManager
     private static final Timer updateTimer = new Timer();
 
     /**
-     * empty string set as default parameter
+     * Empty string set as default parameter
      */
     private static final Set<String> emptyStringSet = new HashSet<>();
 
@@ -188,27 +192,27 @@ public class MainActivity extends PluginManager
     public static PvList mPluginPvs = new PvList();
 
     /**
-     * current status of night mode
+     * Current status of night mode
      */
     public static boolean nightMode = false;
 
     /**
-     * current connection status
+     * Current connection status
      * */
     public static boolean BLE_CONNECTED = false;
 
     /**
-     * current ecu connection status
+     * Current ecu connection status
      * */
     public static boolean ECU_CONNECTED = false;
 
     /**
-     * app preferences ...
+     * App preferences ...
      */
     static SharedPreferences prefs;
 
     /**
-     * dialog builder
+     * Dialog builder
      */
     private static AlertDialog.Builder dlgBuilder;
 
@@ -223,7 +227,7 @@ public class MainActivity extends PluginManager
     private static String mConnectedDeviceName = null;
 
     /**
-     * menu object
+     * Menu object
      */
     private static Menu menu;
 
@@ -238,22 +242,22 @@ public class MainActivity extends PluginManager
     private static ObdItemAdapter currDataAdapter;
 
     /**
-     * initial state of bluetooth adapter
+     * Initial state of bluetooth adapter
      */
     private static boolean initialBtStateEnabled = false;
 
     /**
-     * last time of back key pressed
+     * Last time of back key pressed
      */
     private static long lastBackPressTime = 0;
 
     /**
-     * toast for showing exit message
+     * Toast for showing exit message
      */
     private static Toast exitToast = null;
 
     /**
-     * handler for freeze frame selection
+     * Handler for freeze frame selection
      */
     private final AdapterView.OnItemSelectedListener ff_selected = new AdapterView.OnItemSelectedListener()
     {
@@ -290,7 +294,7 @@ public class MainActivity extends PluginManager
     private CommService mCommService = null;
 
     /**
-     * file helper
+     * File helper
      */
     private FileHelper fileHelper;
 
@@ -304,7 +308,7 @@ public class MainActivity extends PluginManager
 
 /*------------------------------------------------------------------------------------------------*/
     /*
-     * current data view mode
+     * Current data view mode
      */
     private DATA_VIEW_MODE dataViewMode = DATA_VIEW_MODE.LIST;
 
@@ -314,28 +318,31 @@ public class MainActivity extends PluginManager
     private AutoHider toolbarAutoHider;
 
     /**
-     * log file handler
+     * Log file handler
      */
     private FileHandler logFileHandler;
 
     /**
-     * current OBD service
+     * Current OBD service
      */
     private int obdService = ElmProt.OBD_SVC_NONE;
 
     /**
-     * current operating mode
+     * Current operating mode
      */
     private MODE mode = MODE.OFFLINE;
 
     /*
-     * simple log utility
+     * Simple log utility
      * */
     public static void myLog(String msg) {
         String TAG = "STATUS";
         Log.i(TAG, msg);
     }
 
+    /*
+    * Current ECU status
+    * */
     public static boolean isEcuConnected(ElmProt.STAT status) {
         switch (status) {
             case INITIALIZING:
@@ -499,9 +506,13 @@ public class MainActivity extends PluginManager
                     case MESSAGE_OBD_STATE_CHANGED:
                         evt = (PropertyChangeEvent) msg.obj;
                         ElmProt.STAT state = (ElmProt.STAT) evt.getNewValue();
-
+                        /*
+                        * Toggle data view based on ECU status with
+                        * a delay to allow time for the data to load
+                        * */
                         if (isEcuConnected(state)) {
                             delayVisibility();
+                            readFaultCodes();
                         }
                         /* Show ELM status only in ONLINE mode */
                         if (getMode() != MODE.DEMO)
@@ -833,6 +844,7 @@ public class MainActivity extends PluginManager
     @Override
     public void onBackPressed()
     {
+        delayVisibility();
         if (getListAdapter() == pluginHandler)
         {
             setObdService(obdService, String.valueOf(CommService.elm.getService()));
@@ -873,7 +885,7 @@ public class MainActivity extends PluginManager
      * */
     @SuppressLint("NewApi")
     public void delayVisibility() {
-        int delayTime = 4000;
+        int delayTime = 2000;
         final Handler handler = new Handler();
         if (ECU_CONNECTED) {
             handler.postDelayed(() -> {
@@ -921,6 +933,7 @@ public class MainActivity extends PluginManager
     /**
      * Handler for Options menu selection
      */
+    @SuppressLint("NonConstantResourceId")
     @Override
     public boolean onOptionsItemSelected(MenuItem item)
     {
@@ -1010,6 +1023,8 @@ public class MainActivity extends PluginManager
                 setObdService(ObdProt.OBD_SVC_READ_CODES, item.getTitle());
                 Toast.makeText(this, "service_clearcodes", Toast.LENGTH_SHORT).show();
                 return true;
+
+            default:
 
 //            case id.context_graph:
 //
@@ -1650,12 +1665,17 @@ public class MainActivity extends PluginManager
         setObdService(obdService, null);
     }
 
+    /*
+    * Display Fault Codes (numCodes)
+    * */
     private void setNumCodes(int newNumCodes)
     {
         // set list background based on MIL status
         View list = findViewById(id.obd_list);
         if (list != null)
         {
+            myLog("newNumCodes : " + newNumCodes);
+
             list.setBackgroundResource((newNumCodes & 0x80) != 0
                     ? drawable.mil_on
                     : drawable.mil_off);
@@ -2449,6 +2469,11 @@ public class MainActivity extends PluginManager
                 .setNegativeButton(android.R.string.no, null)
                 .setCancelable(false)
                 .show();
+    }
+
+    public void readFaultCodes() {
+        String faultCodes = String.valueOf(ObdProt.OBD_SVC_READ_CODES);
+        myLog("Fault Codes : " + faultCodes);
     }
 
     /**
