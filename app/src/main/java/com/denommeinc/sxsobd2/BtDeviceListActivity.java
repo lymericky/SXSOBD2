@@ -25,6 +25,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.AdapterView;
@@ -33,6 +34,7 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 
 import java.util.Set;
@@ -45,7 +47,8 @@ import java.util.logging.Logger;
  * by the user, the MAC address of the device is sent back to the parent
  * Activity in the result Intent.
  */
-@SuppressLint("InlinedApi")
+
+
 public class BtDeviceListActivity extends Activity {
 	// Debugging
 	private static final String TAG = BtDeviceListActivity.class.getSimpleName();
@@ -92,9 +95,11 @@ public class BtDeviceListActivity extends Activity {
 		}
 
 		// Get a set of currently paired devices
-		if (ActivityCompat.checkSelfPermission(this, scan_permission) != PackageManager.PERMISSION_GRANTED) {
-			requestPermissions(bt_permissions, 1);
-			return;
+		if (Build.VERSION.SDK_INT == Build.VERSION_CODES.S) {
+			if (ActivityCompat.checkSelfPermission(this, scan_permission) != PackageManager.PERMISSION_GRANTED) {
+				requestPermissions(bt_permissions, 1);
+				return;
+			}
 		}
 		Set<BluetoothDevice> pairedDevices = mBtAdapter.getBondedDevices();
 
@@ -119,9 +124,11 @@ public class BtDeviceListActivity extends Activity {
 
 		public void onItemClick(AdapterView<?> av, View v, int arg2, long arg3)
 		{
-			if (ActivityCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-				requestPermissions(bt_permissions, 1);
-				return;
+			if (Build.VERSION.SDK_INT == Build.VERSION_CODES.S) {
+				if (ActivityCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+					requestPermissions(bt_permissions, 1);
+					return;
+				}
 			}
 			// Cancel discovery because it's costly and we're about to connect
 			mBtAdapter.cancelDiscovery();

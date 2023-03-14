@@ -675,7 +675,6 @@ public class MainActivity extends PluginManager
         ObdProt.setFixedPid(pids);
     }
 
-    @SuppressLint("NewApi")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -786,10 +785,13 @@ public class MainActivity extends PluginManager
                     initialBtStateEnabled = mBluetoothAdapter.isEnabled();
                     if (!initialBtStateEnabled)
                     {
-                        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                            requestPermissions(new String[]{Manifest.permission.BLUETOOTH_CONNECT}, 1);
-                            return;
+                        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.S) {
+                            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                                requestPermissions(new String[]{Manifest.permission.BLUETOOTH_CONNECT}, 1);
+                                return;
+                            }
                         }
+
                         Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
                         startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
                     } else {
@@ -830,7 +832,6 @@ public class MainActivity extends PluginManager
      * @see android.app.Activity#onDestroy()
      */
 
-    @SuppressLint("NewApi")
     @Override
     protected void onDestroy()
     {
@@ -866,9 +867,11 @@ public class MainActivity extends PluginManager
         // if bluetooth adapter was switched OFF before ...
         if (mBluetoothAdapter != null && !initialBtStateEnabled)
         {
-            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(new String[]{Manifest.permission.BLUETOOTH_CONNECT}, 1);
-                return;
+            if (Build.VERSION.SDK_INT == Build.VERSION_CODES.S) {
+                if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{Manifest.permission.BLUETOOTH_CONNECT}, 1);
+                    return;
+                }
             }
             // ... turn it OFF again
             mBluetoothAdapter.disable();
@@ -943,14 +946,15 @@ public class MainActivity extends PluginManager
     /**
      * Handler for visibility delay
      * */
-    @SuppressLint("NewApi")
     public void delayVisibility() {
         int delayTime = 2000;
         final Handler handler = new Handler();
         if (ECU_CONNECTED) {
             handler.postDelayed(() -> {
                 View v = getListView();
-                setObdService(ObdProt.OBD_SVC_DATA, v.getAccessibilityPaneTitle());
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    setObdService(ObdProt.OBD_SVC_DATA, v.getAccessibilityPaneTitle());
+                }
             }, delayTime);
         }
     }
@@ -974,7 +978,7 @@ public class MainActivity extends PluginManager
     /**
      * Handler for Buttons
      * */
-    @SuppressLint({"NonConstantResourceId", "NewApi"})
+    @SuppressLint({"NonConstantResourceId"})
     @Override
     public void onClick(View v) {
         int id = v.getId();

@@ -28,6 +28,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Handler;
 import android.os.ParcelUuid;
 
@@ -49,7 +50,7 @@ import java.util.logging.Level;
  * connections, a thread for connecting with a device, and a thread for
  * performing data transmissions when connected.
  */
-@SuppressLint("NewApi")
+
 public class BtCommService extends CommService
 {
 
@@ -80,9 +81,11 @@ public class BtCommService extends CommService
 		// Always cancel discovery because it will slow down a connection
 		// Member fields
 		BluetoothAdapter mAdapter = BluetoothAdapter.getDefaultAdapter();
-		if (ContextCompat.checkSelfPermission(context.getApplicationContext(), android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-			ActivityCompat.requestPermissions(new Activity(), bt_permissions, 1);
-			return;
+		if (Build.VERSION.SDK_INT == Build.VERSION_CODES.S) {
+			if (ContextCompat.checkSelfPermission(context.getApplicationContext(), android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+				ActivityCompat.requestPermissions(new Activity(), bt_permissions, 1);
+				return;
+			}
 		}
 		mAdapter.cancelDiscovery();
 
@@ -179,10 +182,11 @@ public class BtCommService extends CommService
 		// Start the thread to manage the connection and perform transmissions
 		mBtWorkerThread = new BtWorkerThread(socket, socketType);
 		mBtWorkerThread.start();
-
-		if (ContextCompat.checkSelfPermission(mContext.getApplicationContext(), android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-			requestPermissions(new Activity(), bt_permissions, 1);
-			return;
+		if (Build.VERSION.SDK_INT == Build.VERSION_CODES.S) {
+			if (ContextCompat.checkSelfPermission(mContext.getApplicationContext(), android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+				requestPermissions(new Activity(), bt_permissions, 1);
+				return;
+			}
 		}
         // we are connected -> signal connection established
         connectionEstablished(device.getName());
@@ -249,9 +253,11 @@ public class BtCommService extends CommService
 			// given BluetoothDevice
 			try
 			{
-				if (ContextCompat.checkSelfPermission(mContext.getApplicationContext(), android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-					requestPermissions(new Activity(), bt_permissions, 1);
-					return;
+				if (Build.VERSION.SDK_INT == Build.VERSION_CODES.S) {
+					if (ContextCompat.checkSelfPermission(mContext.getApplicationContext(), android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+						requestPermissions(new Activity(), bt_permissions, 1);
+						return;
+					}
 				}
 				if (secure)
 				{
@@ -281,10 +287,11 @@ public class BtCommService extends CommService
 				StringBuilder message = new StringBuilder(msg);
 				// dump supported UUID's
 				message.append(" - UUIDs:");
-
-				if (ContextCompat.checkSelfPermission(mContext.getApplicationContext(), android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-					requestPermissions(new Activity(), bt_permissions, 1);
-					return;
+				if (Build.VERSION.SDK_INT == Build.VERSION_CODES.S) {
+					if (ContextCompat.checkSelfPermission(mContext.getApplicationContext(), android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+						requestPermissions(new Activity(), bt_permissions, 1);
+						return;
+					}
 				}
 				 ParcelUuid[] uuids = socket.getRemoteDevice().getUuids();
 				if(uuids != null)
@@ -311,9 +318,11 @@ public class BtCommService extends CommService
 			{
 				log.log(Level.FINE, "Connect BT socket");
 
-				if (ContextCompat.checkSelfPermission(mContext.getApplicationContext(), android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-					requestPermissions(new Activity(), bt_permissions, 1);
-					return;
+				if (Build.VERSION.SDK_INT == Build.VERSION_CODES.S) {
+					if (ContextCompat.checkSelfPermission(mContext.getApplicationContext(), Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+						requestPermissions(new Activity(), bt_permissions, 1);
+						return;
+					}
 				}
 				// This is a blocking call and will only return on a
 				// successful connection or an exception
