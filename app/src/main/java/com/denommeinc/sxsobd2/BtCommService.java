@@ -18,13 +18,21 @@
 
 package com.denommeinc.sxsobd2;
 
+import static androidx.core.app.ActivityCompat.requestPermissions;
+
+import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.os.ParcelUuid;
+
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.fr3ts0n.prot.StreamHandler;
 
@@ -44,20 +52,27 @@ import java.util.logging.Level;
 @SuppressLint("NewApi")
 public class BtCommService extends CommService
 {
-	
+
 	private BtConnectThread mBtConnectThread;
 	private BtWorkerThread mBtWorkerThread;
 	/** communication stream handler */
 	private final StreamHandler ser = new StreamHandler();
-	
-	
+
+	public String scan_permission = Manifest.permission.BLUETOOTH_SCAN;
+	public String connect_permission = Manifest.permission.BLUETOOTH_CONNECT;
+	public String[] bt_permissions = {
+			scan_permission,
+			connect_permission
+	};
+
+
 	/**
 	 * Constructor. Prepares a new Bluetooth Communication session.
 	 *
 	 * @param context The UI Activity Context
 	 * @param handler A Handler to send messages back to the UI Activity
 	 */
-	@SuppressLint("MissingPermission")
+
 	BtCommService(Context context, Handler handler)
 	{
 		super(context, handler);
@@ -65,8 +80,12 @@ public class BtCommService extends CommService
 		// Always cancel discovery because it will slow down a connection
 		// Member fields
 		BluetoothAdapter mAdapter = BluetoothAdapter.getDefaultAdapter();
+		if (ContextCompat.checkSelfPermission(context.getApplicationContext(), android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+			ActivityCompat.requestPermissions(new Activity(), bt_permissions, 1);
+			return;
+		}
 		mAdapter.cancelDiscovery();
-		
+
 		// set up protocol handlers
 		elm.addTelegramWriter(ser);
 		ser.setMessageHandler(elm);
@@ -139,7 +158,6 @@ public class BtCommService extends CommService
 	 * @param socket The BluetoothSocket on which the connection was made
 	 * @param device The BluetoothDevice that has been connected
 	 */
-	@SuppressLint("MissingPermission")
 	private synchronized void connected(BluetoothSocket socket, BluetoothDevice
 		                                                            device, final String socketType)
 	{
@@ -162,6 +180,10 @@ public class BtCommService extends CommService
 		mBtWorkerThread = new BtWorkerThread(socket, socketType);
 		mBtWorkerThread.start();
 
+		if (ContextCompat.checkSelfPermission(mContext.getApplicationContext(), android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+			requestPermissions(new Activity(), bt_permissions, 1);
+			return;
+		}
         // we are connected -> signal connection established
         connectionEstablished(device.getName());
     }
@@ -213,7 +235,6 @@ public class BtCommService extends CommService
 		private BluetoothSocket mmSocket;
 		private final String mSocketType;
 
-		@SuppressLint("MissingPermission")
 		BtConnectThread(BluetoothDevice device, boolean secure)
 		{
 			mmDevice = device;
@@ -223,11 +244,15 @@ public class BtCommService extends CommService
 			// Modified to work with SPP Devices
 			final UUID SPP_UUID = UUID
 				.fromString("00001101-0000-1000-8000-00805F9B34FB");
-			
+
 			// Get a BluetoothSocket for a connection with the
 			// given BluetoothDevice
 			try
 			{
+				if (ContextCompat.checkSelfPermission(mContext.getApplicationContext(), android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+					requestPermissions(new Activity(), bt_permissions, 1);
+					return;
+				}
 				if (secure)
 				{
 					tmp = device.createRfcommSocketToServiceRecord(SPP_UUID);
@@ -243,7 +268,7 @@ public class BtCommService extends CommService
 
 			logSocketUuids(mmSocket, "BT socket");
 		}
-		
+
 		/**
 		 * Log supported UUIDs of specified BluetoothSocket
 		 * @param socket Socket to log
@@ -256,7 +281,12 @@ public class BtCommService extends CommService
 				StringBuilder message = new StringBuilder(msg);
 				// dump supported UUID's
 				message.append(" - UUIDs:");
-				@SuppressLint("MissingPermission") ParcelUuid[] uuids = socket.getRemoteDevice().getUuids();
+
+				if (ContextCompat.checkSelfPermission(mContext.getApplicationContext(), android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+					requestPermissions(new Activity(), bt_permissions, 1);
+					return;
+				}
+				 ParcelUuid[] uuids = socket.getRemoteDevice().getUuids();
 				if(uuids != null)
 				{
 					for (ParcelUuid uuid: uuids)
@@ -271,8 +301,7 @@ public class BtCommService extends CommService
 				log.log(Level.INFO, message.toString());
 			}
 		}
-		
-		@SuppressLint("MissingPermission")
+
 		public void run()
 		{
 			log.log(Level.INFO, "BEGIN mBtConnectThread SocketType:" + mSocketType);
@@ -282,6 +311,10 @@ public class BtCommService extends CommService
 			{
 				log.log(Level.FINE, "Connect BT socket");
 
+				if (ContextCompat.checkSelfPermission(mContext.getApplicationContext(), android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+					requestPermissions(new Activity(), bt_permissions, 1);
+					return;
+				}
 				// This is a blocking call and will only return on a
 				// successful connection or an exception
 				mmSocket.connect();

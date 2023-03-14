@@ -1,5 +1,6 @@
 package com.denommeinc.sxsobd2;
 
+import static androidx.core.app.ActivityCompat.requestPermissions;
 import static com.denommeinc.sxsobd2.R.array;
 import static com.denommeinc.sxsobd2.R.color;
 import static com.denommeinc.sxsobd2.R.drawable;
@@ -21,6 +22,7 @@ import android.content.ClipboardManager;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
@@ -45,6 +47,8 @@ import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.Toast;
+
+import androidx.core.content.ContextCompat;
 
 import com.fr3ts0n.androbd.plugin.Plugin;
 import com.fr3ts0n.androbd.plugin.mgr.PluginManager;
@@ -372,7 +376,7 @@ public class MainActivity extends PluginManager
      * Simple log utility
      * */
     public static void myLog(String msg) {
-        String TAG = "STATUS";
+        String TAG = "MY_LOG";
         Log.i(TAG, msg);
     }
 
@@ -458,11 +462,17 @@ public class MainActivity extends PluginManager
                         {
                             case CONNECTED:
                                 onConnect();
+                                myLog("--- Connected ---");
                                 break;
 
                             case CONNECTING:
+                                myLog("Connecting...");
                                 setStatus(string.title_connecting);
                                 break;
+
+                            case OFFLINE:
+                                onDisconnect();
+                                myLog("--- Off Line ---");
 
                             default:
                                 onDisconnect();
@@ -665,7 +675,7 @@ public class MainActivity extends PluginManager
         ObdProt.setFixedPid(pids);
     }
 
-    @SuppressLint({"MissingPermission"})
+    @SuppressLint("NewApi")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -715,7 +725,12 @@ public class MainActivity extends PluginManager
         onSharedPreferenceChanged(prefs, null);
 
         // set up logging system
-        setupLoggers();
+        try {
+            setupLoggers();
+        } catch (Exception e) {
+            e.printStackTrace();
+            myLog("---ERROR---\t\t" + e.getMessage());
+        }
 
         // Log program startup
         log.info(String.format("%s %s starting",
@@ -725,9 +740,17 @@ public class MainActivity extends PluginManager
         // create file helper instance
         fileHelper = new FileHelper(this);
         // set listeners for data structure changes
-        setDataListeners();
+        try {
+            setDataListeners();
+        } catch (Exception e) {
+            myLog(e.getMessage());
+        }
         // automate elm status display
-        CommService.elm.addPropertyChangeListener(this);
+        try {
+            CommService.elm.addPropertyChangeListener(this);
+        } catch (Exception e) {
+            myLog(e.getMessage());
+        }
 
         // set up action bar
         ActionBar actionBar = getActionBar();
@@ -763,8 +786,14 @@ public class MainActivity extends PluginManager
                     initialBtStateEnabled = mBluetoothAdapter.isEnabled();
                     if (!initialBtStateEnabled)
                     {
+                        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                            requestPermissions(new String[]{Manifest.permission.BLUETOOTH_CONNECT}, 1);
+                            return;
+                        }
                         Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
                         startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
+                    } else {
+                        myLog("Bluetooth Enabled OKAY");
                     }
                 }
                 break;
@@ -791,6 +820,7 @@ public class MainActivity extends PluginManager
         {
             // start ELM protocol demo loop
             setMode(MODE.DEMO);
+            myLog("--- Bluetooth is not supported--- ");
         }
     }
 
@@ -799,7 +829,8 @@ public class MainActivity extends PluginManager
      *
      * @see android.app.Activity#onDestroy()
      */
-    @SuppressLint("MissingPermission")
+
+    @SuppressLint("NewApi")
     @Override
     protected void onDestroy()
     {
@@ -835,6 +866,10 @@ public class MainActivity extends PluginManager
         // if bluetooth adapter was switched OFF before ...
         if (mBluetoothAdapter != null && !initialBtStateEnabled)
         {
+            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.BLUETOOTH_CONNECT}, 1);
+                return;
+            }
             // ... turn it OFF again
             mBluetoothAdapter.disable();
         }
@@ -944,14 +979,28 @@ public class MainActivity extends PluginManager
     public void onClick(View v) {
         int id = v.getId();
         if (id == R.id.connect_fab) {
-            if (getMode() == MODE.OFFLINE) {
-                setMode(MODE.ONLINE);
-            } else {
+
+            try {
+                myLog("Trying to connect -------------------------------");
+                if (getMode() == MODE.OFFLINE) {
+                        setMode(MODE.ONLINE);
+                    }
+            } catch (Exception e) {
+                e.printStackTrace();
+                myLog("---ERROR---\t\t" + e.getMessage());
+            }
+        } else {
+
+            try {
                 setMode(MODE.OFFLINE);
                 if (mCommService != null) {
                     mCommService.stop();
                 }
+            } catch (Exception e) {
+                e.printStackTrace();
+                myLog("---ERROR---\t\t" + e.getMessage());
             }
+
         }
     }
 
@@ -994,8 +1043,13 @@ public class MainActivity extends PluginManager
             case id.settings:
                 // Launch the BtDeviceListActivity to see devices and do scan
                 Toast.makeText(this, "settings", Toast.LENGTH_SHORT).show();
-                Intent settingsIntent = new Intent(this, SettingsActivity.class);
-                startActivityForResult(settingsIntent, REQUEST_SETTINGS);
+                try {
+                    Intent settingsIntent = new Intent(this, SettingsActivity.class);
+                    startActivityForResult(settingsIntent, REQUEST_SETTINGS);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    myLog("---ERROR---\t\t" + e.getMessage());
+                }
                 return true;
 
             case id.plugin_manager:
@@ -1904,11 +1958,16 @@ public class MainActivity extends PluginManager
                                 } else
                                 {
                                     // ... otherwise launch the BtDeviceListActivity to see devices and do scan
-                                    Intent serverIntent = new Intent(this, BtDeviceListActivity.class);
-                                    startActivityForResult(serverIntent,
-                                            prefs.getBoolean("bt_secure_connection", false)
-                                                    ? REQUEST_CONNECT_DEVICE_SECURE
-                                                    : REQUEST_CONNECT_DEVICE_INSECURE);
+                                    try {
+                                        Intent serverIntent = new Intent(this, BtDeviceListActivity.class);
+                                        startActivityForResult(serverIntent,
+                                                prefs.getBoolean("bt_secure_connection", false)
+                                                        ? REQUEST_CONNECT_DEVICE_SECURE
+                                                        : REQUEST_CONNECT_DEVICE_INSECURE);
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                        myLog("---ERROR---\t\t" + e.getMessage());
+                                    }
                                 }
                             }
                             break;
@@ -1964,43 +2023,41 @@ public class MainActivity extends PluginManager
     {
         // set file handler for log file output
         String logFileName = FileHelper.getPath(this).concat(File.separator).concat("log");
-        try
-        {
-            // ensure log directory is available
-            //noinspection ResultOfMethodCallIgnored
-            new File(logFileName).mkdirs();
-            // Create new log file handler (max. 250 MB, 5 files rotated, non appending)
+        // ensure log directory is available
+        //noinspection ResultOfMethodCallIgnored
+        new File(logFileName).mkdirs();
+        // Create new log file handler (max. 250 MB, 5 files rotated, non appending)
+        try {
             logFileHandler = new FileHandler(logFileName.concat("/AndrOBD.log.%g.txt"),
                     250 * 1024 * 1024,
                     5,
                     false);
-            // Set log message formatter
-            logFileHandler.setFormatter(new SimpleFormatter()
-            {
-                final String format = "%1$tF\t%1$tT.%1$tL\t%4$s\t%3$s\t%5$s%n";
-
-                @SuppressLint("DefaultLocale")
-                @Override
-                public synchronized String format(LogRecord lr)
-                {
-                    return String.format(format,
-                            new Date(lr.getMillis()),
-                            lr.getSourceClassName(),
-                            lr.getLoggerName(),
-                            lr.getLevel().getName(),
-                            lr.getMessage()
-                    );
-                }
-            });
-            // add file logging ...
-            rootLogger.addHandler(logFileHandler);
-            // set
-            setLogLevels();
-        } catch (IOException e)
-        {
-            // try to log error (at least with system logging)
-            log.log(Level.SEVERE, logFileName, e);
+        } catch (IOException | SecurityException e) {
+            e.printStackTrace();
+            myLog("---ERROR---\t\t" + e.getMessage());
         }
+        // Set log message formatter
+        logFileHandler.setFormatter(new SimpleFormatter()
+        {
+            final String format = "%1$tF\t%1$tT.%1$tL\t%4$s\t%3$s\t%5$s%n";
+
+            @SuppressLint("DefaultLocale")
+            @Override
+            public synchronized String format(LogRecord lr)
+            {
+                return String.format(format,
+                        new Date(lr.getMillis()),
+                        lr.getSourceClassName(),
+                        lr.getLoggerName(),
+                        lr.getLevel().getName(),
+                        lr.getMessage()
+                );
+            }
+        });
+        // add file logging ...
+        rootLogger.addHandler(logFileHandler);
+        // set
+        setLogLevels();
     }
 
     /**

@@ -23,6 +23,7 @@ import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.util.Log;
 
 import com.fr3ts0n.ecu.prot.obd.ElmProt;
 
@@ -153,6 +154,7 @@ public abstract class CommService
 		bundle.putString(MainActivity.TOAST, mContext.getString(R.string.unabletoconnect));
 		msg.setData(bundle);
 		mHandler.sendMessage(msg);
+		Log.e("CommService", "---Connect ERROR---");
 	}
 
 	/**

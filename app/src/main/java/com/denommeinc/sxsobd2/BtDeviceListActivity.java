@@ -18,11 +18,13 @@
 
 package com.denommeinc.sxsobd2;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.AdapterView;
@@ -30,6 +32,8 @@ import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
+
+import androidx.core.app.ActivityCompat;
 
 import java.util.Set;
 import java.util.logging.Level;
@@ -41,57 +45,65 @@ import java.util.logging.Logger;
  * by the user, the MAC address of the device is sent back to the parent
  * Activity in the result Intent.
  */
-public class BtDeviceListActivity extends Activity
-{
+@SuppressLint("InlinedApi")
+public class BtDeviceListActivity extends Activity {
 	// Debugging
 	private static final String TAG = BtDeviceListActivity.class.getSimpleName();
 	private static final Logger log = Logger.getLogger(TAG);
-	
+
+
+	public String scan_permission = Manifest.permission.BLUETOOTH_SCAN;
+	public String connect_permission = Manifest.permission.BLUETOOTH_CONNECT;
+	public String[] bt_permissions = {
+			scan_permission,
+			connect_permission
+	};
+
 	// Return Intent extra
 	public static final String EXTRA_DEVICE_ADDRESS = "device_address";
 
 	// Member fields
 	private BluetoothAdapter mBtAdapter;
 
-	@SuppressLint("MissingPermission")
 	@Override
-	protected void onCreate(Bundle savedInstanceState)
-	{
+	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		
+
 		// Set result CANCELED in case the user backs out
 		setResult(Activity.RESULT_CANCELED);
 		// Setup the window
 		setContentView(R.layout.device_list);
-		
+
 		// Get the local Bluetooth adapter
 		mBtAdapter = BluetoothAdapter.getDefaultAdapter();
 
 		ArrayAdapter<String> mPairedDevicesArrayAdapter =
-			new ArrayAdapter<>(this, R.layout.device_name);
-		
+				new ArrayAdapter<>(this, R.layout.device_name);
+
 		// Find and set up the ListView for paired devices
 		ListView pairedListView = findViewById(R.id.paired_devices);
 		pairedListView.setAdapter(mPairedDevicesArrayAdapter);
 
-		if(mBtAdapter == null || !mBtAdapter.isEnabled())
-		{
+		if (mBtAdapter == null || !mBtAdapter.isEnabled()) {
 			String noDevices = getResources().getText(R.string.none_paired).toString();
 			mPairedDevicesArrayAdapter.add(noDevices);
-			
+
 			return;
 		}
-		
+
 		// Get a set of currently paired devices
-		@SuppressLint("MissingPermission") Set<BluetoothDevice> pairedDevices = mBtAdapter.getBondedDevices();
+		if (ActivityCompat.checkSelfPermission(this, scan_permission) != PackageManager.PERMISSION_GRANTED) {
+			requestPermissions(bt_permissions, 1);
+			return;
+		}
+		Set<BluetoothDevice> pairedDevices = mBtAdapter.getBondedDevices();
 
 		// If there are paired devices, add each one to the ArrayAdapter
-		if (pairedDevices.size() > 0)
-		{
+		if (pairedDevices.size() > 0) {
 			// set up list selection handlers
 			pairedListView.setOnItemClickListener(mDeviceClickListener);
-			for (BluetoothDevice device : pairedDevices)
-			{
+			for (BluetoothDevice device : pairedDevices) {
+
 				mPairedDevicesArrayAdapter.add(device.getName() + "\n" + device.getAddress());
 			}
 		} else
@@ -104,9 +116,13 @@ public class BtDeviceListActivity extends Activity
 	// The on-click listener for all devices in the ListViews
 	private final OnItemClickListener mDeviceClickListener = new OnItemClickListener()
 	{
-		@SuppressLint("MissingPermission")
+
 		public void onItemClick(AdapterView<?> av, View v, int arg2, long arg3)
 		{
+			if (ActivityCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+				requestPermissions(bt_permissions, 1);
+				return;
+			}
 			// Cancel discovery because it's costly and we're about to connect
 			mBtAdapter.cancelDiscovery();
 
